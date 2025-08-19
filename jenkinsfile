@@ -2,8 +2,8 @@ pipeline {
     agent any
 
     environment {
-        SONARQUBE = credentials('sonarqube-token')   // Jenkins credential for SonarQube
-        DOCKERHUB = credentials('dockerhub-credentials') // Jenkins credential for DockerHub
+        SONARQUBE = credentials('sonarqube-token')        // Jenkins credential for SonarQube
+        DOCKERHUB = credentials('dockerhub-credentials')  // Jenkins credential for DockerHub
     }
 
     stages {
@@ -28,7 +28,12 @@ pipeline {
             steps {
                 sh '''
                   . venv/bin/activate
-                  pytest tests/ --maxfail=1 --disable-warnings -q
+                  # Run pytest on tests/ if it exists, otherwise run on current dir
+                  if [ -d "tests" ]; then
+                      pytest tests/ --maxfail=1 --disable-warnings -q
+                  else
+                      pytest --maxfail=1 --disable-warnings -q
+                  fi
                 '''
             }
         }
