@@ -2,89 +2,61 @@ pipeline {
     agent any
 
     environment {
-        DOCKERHUB = credentials('dockerhub-credentials')  // Jenkins credential for DockerHub
+        SONARQUBE = 'SonarQube' // Your SonarQube server name in Jenkins
+        SONAR_TOKEN = credentials('sonar-token') // Jenkins credential with your Sonar token
     }
 
     stages {
         stage('Checkout') {
             steps {
-                git branch: 'main', url: 'https://github.com/srushti181203/news.git'
+                git branch: 'main', url: 'https://github.com/your-repo.git'
             }
         }
 
         stage('Setup Python') {
             steps {
-                sh '''
-                  python3 -m venv venv
-                  . venv/bin/activate
-                  pip install --upgrade pip
-                  pip install -r requirements.txt
-                '''
-            }
-        }
-
-        stage('Run Tests') {
-            steps {
-                sh '''
-                  . venv/bin/activate
-                  if [ -d "tests" ]; then
-                      pytest tests/ --maxfail=1 --disable-warnings -q
-                  else
-                      pytest --maxfail=1 --disable-warnings -q
-                  fi
-                '''
+                // Use your Python version
+                sh 'python3 -m venv venv'
+                sh '. venv/bin/activate && pip install --upgrade pip'
+                sh '. venv/bin/activate && pip install -r requirements.txt'
             }
         }
 
         stage('SonarQube Analysis') {
             steps {
-                withSonarQubeEnv('sonarqube') { // Use the SonarQube server configured in Jenkins
-                    sh """
-                      . venv/bin/activate
-                      ${tool 'sonar-scanner'}/bin/sonar-scanner \
+                withSonarQubeEnv('SonarQube') {
+                    sh '''
+                        . venv/bin/activate
+                        sonar-scanner \
                         -Dsonar.projectKey=fake-news-detection \
                         -Dsonar.sources=. \
                         -Dsonar.host.url=$SONAR_HOST_URL \
-                        -Dsonar.login=$SONAR_AUTH_TOKEN
-                    """
+                        -Dsonar.login=$SONAR_TOKEN \
+                        -Dsonar.exclusions="venv/**,**/__pycache__/**,**/*.pyc,**/tests/**"
+                    '''
                 }
             }
         }
 
-        stage('Build Docker Image') {
+        stage('Quality Gate') {
             steps {
-                sh '''
-                  docker build -t $DOCKERHUB_USR/fake-news-detection:latest .
-                '''
-            }
-        }
-
-        stage('Push Docker Image') {
-            steps {
-                sh '''
-                  echo $DOCKERHUB_PSW | docker login -u $DOCKERHUB_USR --password-stdin
-                  docker push $DOCKERHUB_USR/fake-news-detection:latest
-                '''
-            }
-        }
-
-        stage('Deploy Container') {
-            steps {
-                sh '''
-                  docker stop fake-news-detection || true
-                  docker rm fake-news-detection || true
-                  docker run -d -p 5000:5000 --name fake-news-detection $DOCKERHUB_USR/fake-news-detection:latest
-                '''
+                timeout(time: 5, unit: 'MINUTES') {
+                    waitForQualityGate abortPipeline: true
+                }
             }
         }
     }
 
     post {
+        always {
+            echo 'Cleaning workspace...'
+            deleteDir()
+        }
         success {
-            echo "✅ Pipeline executed successfully!"
+            echo 'Pipeline completed successfully!'
         }
         failure {
-            echo "❌ Pipeline failed. Check logs."
+            echo 'Pipeline failed!'
         }
     }
 }
