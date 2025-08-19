@@ -2,20 +2,21 @@ pipeline {
     agent any
 
     environment {
-        SONARQUBE = 'SonarQube' // Your SonarQube server name in Jenkins
-        SONAR_TOKEN = credentials('sonar-token') // Jenkins credential with your Sonar token
+        SONARQUBE = 'SonarQube'                 // SonarQube server name in Jenkins
+        SONAR_TOKEN = credentials('sonarqube-token') // Secret Text credential ID
     }
 
     stages {
         stage('Checkout') {
             steps {
+                echo 'Cloning repository...'
                 git branch: 'main', url: 'https://github.com/your-repo.git'
             }
         }
 
         stage('Setup Python') {
             steps {
-                // Use your Python version
+                echo 'Setting up Python environment...'
                 sh 'python3 -m venv venv'
                 sh '. venv/bin/activate && pip install --upgrade pip'
                 sh '. venv/bin/activate && pip install -r requirements.txt'
@@ -24,6 +25,7 @@ pipeline {
 
         stage('SonarQube Analysis') {
             steps {
+                echo 'Running SonarQube scan...'
                 withSonarQubeEnv('SonarQube') {
                     sh '''
                         . venv/bin/activate
@@ -40,6 +42,7 @@ pipeline {
 
         stage('Quality Gate') {
             steps {
+                echo 'Checking SonarQube Quality Gate...'
                 timeout(time: 5, unit: 'MINUTES') {
                     waitForQualityGate abortPipeline: true
                 }
@@ -49,8 +52,10 @@ pipeline {
 
     post {
         always {
-            echo 'Cleaning workspace...'
-            deleteDir()
+            node {
+                echo 'Cleaning workspace...'
+                deleteDir()
+            }
         }
         success {
             echo 'Pipeline completed successfully!'
