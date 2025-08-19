@@ -40,7 +40,8 @@ pipeline {
 
         stage('SonarQube Analysis') {
             steps {
-                withSonarQubeEnv('sonarqube') {
+                // Use the correct SonarQube installation name
+                withSonarQubeEnv('sonar-scanner') {
                     sh '''
                       . venv/bin/activate
                       sonar-scanner \
