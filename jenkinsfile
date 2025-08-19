@@ -1,6 +1,7 @@
 pipeline {
     agent any
 
+
     environment {
         SONARQUBE = credentials('sonarqube-token')        // Jenkins credential for SonarQube
         DOCKERHUB = credentials('dockerhub-credentials')  // Jenkins credential for DockerHub
