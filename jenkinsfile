@@ -2,11 +2,16 @@ pipeline {
     agent any
 
     environment {
-        SONAR_TOKEN = credentials('sonarqube-token') // replace with your Jenkins credential ID
+        SONAR_TOKEN = credentials('sonarqube-token')
+        DOCKERHUB_CREDENTIALS = credentials('dockerhub-credentials')
+    }
+
+    tools {
+        sonarScanner 'sonar-scanner'
+        dockerTool 'docker'
     }
 
     stages {
-
         stage('Checkout') {
             steps {
                 echo 'Cloning repository...'
@@ -32,7 +37,7 @@ pipeline {
                 withSonarQubeEnv('sonarqube') {
                     sh '''
                         . venv/bin/activate
-                        sonar-scanner \
+                        $SONARSCANNER_HOME/bin/sonar-scanner \
                         -Dsonar.projectKey=fake-news-detection \
                         -Dsonar.sources=. \
                         -Dsonar.host.url=$SONAR_HOST_URL \
@@ -50,7 +55,6 @@ pipeline {
                 }
             }
         }
-
     }
 
     post {
