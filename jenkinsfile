@@ -2,8 +2,7 @@ pipeline {
     agent any
 
     environment {
-        SONARQUBE = 'SonarQube'                 // SonarQube server name in Jenkins
-        SONAR_TOKEN = credentials('sonarqube-token') // Secret Text credential ID
+        SONAR_TOKEN = credentials('sonarqube-token')
     }
 
     stages {
@@ -52,10 +51,8 @@ pipeline {
 
     post {
         always {
-            node {
-                echo 'Cleaning workspace...'
-                deleteDir()
-            }
+            echo 'Cleaning workspace...'
+            deleteDir()
         }
         success {
             echo 'Pipeline completed successfully!'
