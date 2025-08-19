@@ -2,13 +2,8 @@ pipeline {
     agent any
 
     environment {
-        SONAR_TOKEN = credentials('sonarqube-token')
-        DOCKERHUB_CREDENTIALS = credentials('dockerhub-credentials')
-    }
-
-    tools {
-        sonarScanner 'sonar-scanner'
-        dockerTool 'docker'
+        SONAR_TOKEN = credentials('sonarqube-token')  // Your SonarQube token
+        DOCKER_HUB = credentials('dockerhub-credentials')
     }
 
     stages {
@@ -35,23 +30,30 @@ pipeline {
             steps {
                 echo 'Running SonarQube scan...'
                 withSonarQubeEnv('sonarqube') {
-                    sh '''
-                        . venv/bin/activate
-                        $SONARSCANNER_HOME/bin/sonar-scanner \
-                        -Dsonar.projectKey=fake-news-detection \
-                        -Dsonar.sources=. \
-                        -Dsonar.host.url=$SONAR_HOST_URL \
-                        -Dsonar.login=$SONAR_TOKEN \
-                        -Dsonar.exclusions="venv/**,**/__pycache__/**,**/*.pyc,**/tests/**"
-                    '''
+                    script {
+                        def scannerHome = tool name: 'sonar-scanner', type: 'hudson.plugins.sonar.SonarRunnerInstallation'
+                        sh "${scannerHome}/bin/sonar-scanner -Dsonar.projectKey=fake-news-detection -Dsonar.sources=. -Dsonar.login=${SONAR_TOKEN} -Dsonar.exclusions=venv/**,**/__pycache__/**,**/*.pyc,**/tests/**"
+                    }
                 }
             }
         }
 
         stage('Quality Gate') {
             steps {
-                timeout(time: 5, unit: 'MINUTES') {
+                timeout(time: 1, unit: 'MINUTES') {
                     waitForQualityGate abortPipeline: true
+                }
+            }
+        }
+
+        stage('Docker Build & Push') {
+            steps {
+                script {
+                    sh '''
+                        docker build -t my-dockerhub-username/fake-news-app:latest .
+                        echo $DOCKER_HUB_PSW | docker login -u $DOCKER_HUB_USR --password-stdin
+                        docker push my-dockerhub-username/fake-news-app:latest
+                    '''
                 }
             }
         }
@@ -61,9 +63,6 @@ pipeline {
         always {
             echo 'Cleaning workspace...'
             deleteDir()
-        }
-        success {
-            echo 'Pipeline completed successfully!'
         }
         failure {
             echo 'Pipeline failed!'
