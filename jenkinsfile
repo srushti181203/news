@@ -31,8 +31,15 @@ pipeline {
                 echo 'Running SonarQube scan...'
                 withSonarQubeEnv('sonarqube') {
                     script {
-                        def scannerHome = tool name: 'sonar-scanner', type: 'hudson.plugins.sonar.SonarRunnerInstallation'
-                        sh "${scannerHome}/bin/sonar-scanner -Dsonar.projectKey=fake-news-detection -Dsonar.sources=. -Dsonar.login=${SONAR_TOKEN} -Dsonar.exclusions=venv/**,**/__pycache__/**,**/*.pyc,**/tests/**"
+                        // FIX: tool() now correctly references installation name
+                        def scannerHome = tool 'sonar-scanner'  
+                        sh """
+                            ${scannerHome}/bin/sonar-scanner \
+                            -Dsonar.projectKey=fake-news-detection \
+                            -Dsonar.sources=. \
+                            -Dsonar.login=${SONAR_TOKEN} \
+                            -Dsonar.exclusions=venv/**,**/__pycache__/**,**/*.pyc,**/tests/**
+                        """
                     }
                 }
             }
