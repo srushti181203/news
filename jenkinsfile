@@ -57,9 +57,9 @@ pipeline {
             steps {
                 script {
                     sh '''
-                        docker build -t my-dockerhub-username/fake-news-app:latest .
+                        docker build -t srushtihv123/fake-news-app:latest .
                         echo $DOCKER_HUB_PSW | docker login -u $DOCKER_HUB_USR --password-stdin
-                        docker push my-dockerhub-username/fake-news-app:latest
+                        docker push srushtihv123/fake-news-app:latest
                     '''
                 }
             }
